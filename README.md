@@ -1,4 +1,39 @@
-# Luma Take-Home
+# iMessage Search Rebuild
+
+This repo contains my submission for Luma's take-home. I am rebuilding and improving the iMessage search experience with:
+
+- a `Vite + React` frontend
+- a `Node.js + Express` backend
+- a `SQLite` corpus of conversations, contacts, and messages
+- precomputed embeddings generated with `Transformers.js` using `all-MiniLM-L6-v2`
+- seeded realistic message data generated with `Faker.js`
+
+## Local Development
+
+```bash
+cp .env.example .env
+npm install
+npm run seed
+npm run dev
+```
+
+This starts:
+
+- the Vite client on `http://localhost:5173`
+- the Express API on `http://localhost:3001`
+
+Useful commands:
+
+```bash
+npm run seed
+npm run build
+npm run lint
+npm run start
+```
+
+## Original Take-Home Brief
+
+## Luma Take-Home
 
 Modern engineering is about directing leverage — tools, judgment, taste — toward real outcomes. This take-home is designed around that.
 
