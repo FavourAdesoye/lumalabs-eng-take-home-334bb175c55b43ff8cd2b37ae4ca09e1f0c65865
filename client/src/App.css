@@ -245,6 +245,11 @@
   border-color: rgba(245, 158, 11, 0.28);
 }
 
+.status-pill.is-pending {
+  background: rgba(59, 130, 246, 0.12);
+  border-color: rgba(59, 130, 246, 0.28);
+}
+
 .results-panel__status {
   display: flex;
   flex-direction: column;

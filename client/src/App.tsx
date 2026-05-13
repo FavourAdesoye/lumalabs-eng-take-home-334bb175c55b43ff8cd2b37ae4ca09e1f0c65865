@@ -5,7 +5,7 @@ import { ConversationList } from './components/ConversationList'
 import { FiltersBar } from './components/FiltersBar'
 import { ResultsPanel } from './components/ResultsPanel'
 import { SearchBar } from './components/SearchBar'
-import { fetchOverview, fetchSearch } from './lib/api'
+import { fetchOverview, fetchRerankStatus, fetchSearch } from './lib/api'
 import type { OverviewResponse, SearchResult } from './types/search'
 
 function App() {
@@ -18,7 +18,7 @@ function App() {
   const [dateTo, setDateTo] = useState<string>()
   const [results, setResults] = useState<SearchResult[]>([])
   const [semanticEnabled, setSemanticEnabled] = useState(false)
-  const [semanticFallback, setSemanticFallback] = useState(false)
+  const [semanticPending, setSemanticPending] = useState(false)
   const [queryTimeMs, setQueryTimeMs] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string>()
@@ -66,6 +66,7 @@ function App() {
     const handle = window.setTimeout(async () => {
       if (active) {
         setLoading(true)
+        setSemanticPending(false)
       }
 
       try {
@@ -84,15 +85,47 @@ function App() {
 
         setResults(response.results)
         setSemanticEnabled(response.semanticEnabled)
-        setSemanticFallback(response.semanticFallback)
+        setSemanticPending(response.semanticPending)
         setQueryTimeMs(response.queryTimeMs)
         setError(undefined)
+        setLoading(false)
+
+        if (response.semanticPending && response.rerankKey) {
+          for (let attempt = 0; active && attempt < 24; attempt += 1) {
+            await new Promise((resolve) => window.setTimeout(resolve, attempt === 0 ? 300 : 500))
+
+            const rerankStatus = await fetchRerankStatus(response.rerankKey)
+
+            if (!active) {
+              return
+            }
+
+            if (rerankStatus.status === 'pending') {
+              continue
+            }
+
+            setSemanticPending(false)
+
+            if (rerankStatus.status === 'ready' && rerankStatus.result) {
+              setResults(rerankStatus.result.results)
+              setSemanticEnabled(rerankStatus.result.semanticEnabled)
+              setQueryTimeMs(rerankStatus.result.queryTimeMs)
+            }
+
+            return
+          }
+
+          if (active) {
+            setSemanticPending(false)
+          }
+        }
       } catch (searchError) {
         if (!active) {
           return
         }
 
         setError(searchError instanceof Error ? searchError.message : 'Search failed.')
+        setSemanticPending(false)
       } finally {
         if (active) {
           setLoading(false)
@@ -179,7 +212,7 @@ function App() {
             query={query}
             loading={loading}
             semanticEnabled={semanticEnabled}
-            semanticFallback={semanticFallback}
+            semanticPending={semanticPending}
             queryTimeMs={queryTimeMs}
             selectedConversationTitle={selectedConversation?.title}
             results={results}

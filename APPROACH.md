@@ -42,7 +42,7 @@ I chose `Node.js + Express` for the backend because it keeps the architecture si
 
 ### Data store: `SQLite`
 
-I am storing conversations, messages, contacts, timestamps, and precomputed embeddings in `SQLite`. This gives me a lightweight local database that is easy to seed, easy to query, and much more practical for this project than standing up a separate hosted search or vector database.
+I am storing conversations, messages, contacts, and timestamps in `SQLite`. This gives me a lightweight local database that is easy to seed, easy to query, and much more practical for this project than standing up a separate hosted search or vector database.
 
 The downside is that this is not the most scalable long-term architecture, but it is a strong fit for a take-home because it is simple, inspectable, and reliable in local and hosted environments.
 
@@ -53,16 +53,16 @@ This is the most important technical decision in the project.
 I want semantic search because it is the core differentiator and the clearest way to make the experience better than iMessage. But I do not want the entire product to depend on fuzzy ranking or a fragile AI path. So the system uses a hybrid model:
 
 - lexical retrieval is the baseline for every query
-- semantic similarity reranks only a bounded subset of lexical candidates
-- if embeddings are unavailable, the app falls back to lexical-only results
+- Claude reranks only a bounded subset of lexical candidates
+- if the semantic API fails for any reason, the app falls back to lexical-only results
 
 This approach keeps the experience grounded and predictable while still allowing semantic wins on fuzzy or paraphrased queries.
 
-### Embeddings: `Transformers.js` with `all-MiniLM-L6-v2`
+### Semantic reranking: `Anthropic Claude API`
 
-I chose `Transformers.js` with `all-MiniLM-L6-v2` because it gives me a practical local embedding pipeline without depending on an external embedding API at runtime. To reduce risk in the review environment, embeddings are precomputed during the seed step rather than generated on first launch.
+I switched the semantic layer to the `Anthropic Claude API` after finding that the local embedding approach was not accurate enough for the kinds of fuzzy message lookups I wanted this app to handle. Claude now acts as a semantic reranker on top of the lexical candidate set instead of the app relying on local vector similarity alone.
 
-That tradeoff favors reliability over freshness. It means the corpus is effectively static unless reseeded, but it removes first-run cost and avoids reviewers waiting for indexing or model generation during setup.
+That tradeoff favors semantic quality and product feel over fully local inference. It does introduce an external API dependency, but the system still behaves safely because lexical retrieval stays intact and any Claude failure falls back silently to the lexical ranking.
 
 ### Seed data: `Faker.js`
 
@@ -77,10 +77,10 @@ I chose `Railway` over `Vercel` because this project benefits from a Node server
 The system is organized into a few clear layers:
 
 1. **Seed pipeline**  
-   Generates realistic messages with `Faker.js` and precomputes embeddings with `Transformers.js`.
+   Generates realistic messages with `Faker.js`.
 
 2. **Data layer**  
-   Stores contacts, conversations, messages, timestamps, and embeddings in `SQLite`.
+   Stores contacts, conversations, messages, and timestamps in `SQLite`.
 
 3. **Search layer**  
    Runs lexical retrieval first, then semantic reranking on a limited candidate set, and produces ranking metadata for explanations.
@@ -109,7 +109,7 @@ These are all interesting directions, but they would distract from the actual po
 
 The first thing that would break under real production pressure is search quality at scale.
 
-This design is optimized for a seeded corpus and a tightly controlled demo environment. As the corpus grows, ranking quality gets harder, semantic reranking needs better heuristics, and precomputed embeddings become stale when data changes frequently.
+This design is optimized for a seeded corpus and a tightly controlled demo environment. As the corpus grows, ranking quality gets harder, semantic reranking needs better prompt design or evaluation, and external API latency becomes more noticeable.
 
 Other likely pressure points:
 

@@ -63,7 +63,9 @@ export interface SearchResponse {
   query: string
   semanticEnabled: boolean
   semanticFallback: boolean
+  semanticPending: boolean
   queryTimeMs: number
+  rerankKey?: string
   scope: {
     conversationId?: string
     senderId?: string
@@ -72,6 +74,12 @@ export interface SearchResponse {
     dateTo?: string
   }
   results: SearchResult[]
+}
+
+export interface RerankStatusResponse {
+  status: 'pending' | 'ready' | 'failed'
+  rerankKey: string
+  result?: SearchResponse
 }
 
 export interface OverviewResponse {

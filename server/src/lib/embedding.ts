@@ -1,66 +1,124 @@
-import { pipeline } from '@xenova/transformers'
+import Anthropic from '@anthropic-ai/sdk'
 
 import { config } from '../config.js'
+import type { MessageRecord } from '../types.js'
 
-let extractorPromise: Promise<Awaited<ReturnType<typeof pipeline>>> | null = null
+type SemanticCandidate = Pick<
+  MessageRecord,
+  'id' | 'conversationTitle' | 'senderName' | 'body' | 'sentAt'
+>
 
-async function getExtractor() {
-  if (!extractorPromise) {
-    extractorPromise = pipeline('feature-extraction', config.semanticModel)
+let anthropicClient: Anthropic | null | undefined
+
+function getClient() {
+  if (anthropicClient !== undefined) {
+    return anthropicClient
   }
 
-  return extractorPromise
+  if (!config.semanticSearchEnabled || !config.anthropicApiKey) {
+    anthropicClient = null
+    return anthropicClient
+  }
+
+  anthropicClient = new Anthropic({
+    apiKey: config.anthropicApiKey,
+  })
+
+  return anthropicClient
 }
 
-export async function embedTexts(texts: string[]): Promise<number[][] | null> {
-  if (!config.semanticSearchEnabled || texts.length === 0) {
+function truncate(value: string, limit: number) {
+  if (value.length <= limit) {
+    return value
+  }
+
+  return `${value.slice(0, limit - 1)}...`
+}
+
+function extractTextContent(content: Anthropic.Messages.Message['content']) {
+  return content
+    .filter((block): block is Anthropic.TextBlock => block.type === 'text')
+    .map((block) => block.text)
+    .join('\n')
+}
+
+function parseScores(rawText: string) {
+  const candidate = rawText.match(/```json\s*([\s\S]*?)```/i)?.[1] ?? rawText
+
+  try {
+    const parsed = JSON.parse(candidate) as Array<{ id?: string; score?: number }>
+    return parsed
+  } catch {
+    return null
+  }
+}
+
+export async function semanticRerankWithClaude(
+  query: string,
+  candidates: SemanticCandidate[],
+): Promise<Map<string, number> | null> {
+  if (!config.semanticSearchEnabled || query.trim().length === 0 || candidates.length === 0) {
     return null
   }
 
   try {
-    const extractor = (await getExtractor()) as (
-      input: string,
-      options: {
-        pooling: 'mean'
-        normalize: true
-      },
-    ) => Promise<{ tolist: () => number[] }>
+    const client = getClient()
 
-    return Promise.all(
-      texts.map(async (text) => {
-        const output = await extractor(text, {
-          pooling: 'mean',
-          normalize: true,
-        })
+    if (!client) {
+      return null
+    }
 
-        const values = output.tolist()
-        return Array.isArray(values[0]) ? (values[0] as number[]) : (values as number[])
-      }),
-    )
-  } catch (error) {
-    console.warn('Semantic embeddings unavailable, falling back to lexical-only search.', error)
+    const response = await client.messages.create({
+      model: config.semanticModel,
+      max_tokens: 1600,
+      temperature: 0,
+      system: `You are a semantic reranker for an iMessage-style search engine.
+Return JSON only.
+Given a search query and candidate messages, score each candidate from 0 to 1 based only on semantic relevance.
+0 means unrelated.
+1 means the candidate clearly answers or matches the meaning of the query.
+You must output exactly one object per candidate, using the same id string as in the input (do not invent or shorten ids).
+Do not add commentary.
+Return an array of objects with exactly this shape:
+[{"id":"candidate-id","score":0.82}]`,
+      messages: [
+        {
+          role: 'user',
+          content: JSON.stringify({
+            query,
+            candidates: candidates.map((candidate) => ({
+              id: candidate.id,
+              conversationTitle: candidate.conversationTitle,
+              senderName: candidate.senderName,
+              sentAt: candidate.sentAt,
+              body: truncate(candidate.body, 220),
+            })),
+          }),
+        },
+      ],
+    })
+
+    const parsed = parseScores(extractTextContent(response.content))
+
+    if (!parsed) {
+      return null
+    }
+
+    const validIds = new Set(candidates.map((candidate) => candidate.id))
+    const scoreMap = new Map<string, number>()
+
+    for (const item of parsed) {
+      const id = typeof item.id === 'string' ? item.id.trim() : ''
+
+      if (!id || !validIds.has(id) || typeof item.score !== 'number') {
+        continue
+      }
+
+      scoreMap.set(id, Math.max(0, Math.min(1, item.score)))
+    }
+
+    return scoreMap
+  } catch {
     return null
   }
-}
-
-export function cosineSimilarity(left: number[], right: number[]) {
-  if (left.length === 0 || right.length === 0 || left.length !== right.length) {
-    return 0
-  }
-
-  let dot = 0
-  let leftMagnitude = 0
-  let rightMagnitude = 0
-
-  for (let index = 0; index < left.length; index += 1) {
-    dot += left[index] * right[index]
-    leftMagnitude += left[index] * left[index]
-    rightMagnitude += right[index] * right[index]
-  }
-
-  if (leftMagnitude === 0 || rightMagnitude === 0) {
-    return 0
-  }
-
-  return dot / (Math.sqrt(leftMagnitude) * Math.sqrt(rightMagnitude))
 }

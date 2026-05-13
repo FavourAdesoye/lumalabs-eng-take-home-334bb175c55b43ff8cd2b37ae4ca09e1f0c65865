@@ -18,6 +18,9 @@ export const config = {
     process.env.DATABASE_PATH ?? path.resolve(serverDir, 'data', 'imessage-search.db'),
   port: Number(process.env.PORT ?? 3001),
   clientOrigin: process.env.CLIENT_ORIGIN ?? 'http://localhost:5173',
-  semanticSearchEnabled: (process.env.SEMANTIC_SEARCH_ENABLED ?? 'true') !== 'false',
-  semanticModel: process.env.SEMANTIC_MODEL ?? 'Xenova/all-MiniLM-L6-v2',
+  anthropicApiKey: process.env.ANTHROPIC_API_KEY,
+  semanticSearchEnabled:
+    (process.env.SEMANTIC_SEARCH_ENABLED ?? 'true') !== 'false' &&
+    Boolean(process.env.ANTHROPIC_API_KEY),
+  semanticModel: process.env.ANTHROPIC_MODEL ?? 'claude-haiku-4-5-20251001',
 }

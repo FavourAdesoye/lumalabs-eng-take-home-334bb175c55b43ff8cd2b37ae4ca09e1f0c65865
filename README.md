@@ -5,7 +5,7 @@ This repo contains my submission for Luma's take-home. I am rebuilding and impro
 - a `Vite + React` frontend
 - a `Node.js + Express` backend
 - a `SQLite` corpus of conversations, contacts, and messages
-- precomputed embeddings generated with `Transformers.js` using `all-MiniLM-L6-v2`
+- semantic reranking powered by the `Anthropic Claude API`
 - seeded realistic message data generated with `Faker.js`
 
 ## Local Development

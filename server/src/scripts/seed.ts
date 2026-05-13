@@ -1,7 +1,6 @@
 import { faker } from '@faker-js/faker'
 
 import { db, ensureSchema } from '../db.js'
-import { embedTexts } from '../lib/embedding.js'
 
 faker.seed(42)
 
@@ -288,20 +287,34 @@ function buildFillerDraft(conversationId: string): FillerDraft {
   }
 }
 
-function fillerMessages() {
+function fillerMessages(curated: MessageSeed[]) {
   const generated: MessageSeed[] = []
 
   for (const conversation of conversations) {
-    const fillerCount = faker.number.int({ min: 27, max: 30 })
-    const usedBodies = new Set<string>()
+    const usedBodies = new Set(
+      curated
+        .filter((message) => message.conversationId === conversation.id)
+        .map((message) => message.body),
+    )
+    const fillerCount = faker.number.int({ min: 23, max: 25 })
+    let stallBudget = fillerCount * 150
 
     for (let index = 0; index < fillerCount; index += 1) {
+      if (stallBudget-- <= 0) {
+        break
+      }
+
       let draft = buildFillerDraft(conversation.id)
       let attempts = 0
 
       while (usedBodies.has(draft.body) && attempts < 12) {
         draft = buildFillerDraft(conversation.id)
         attempts += 1
+      }
+
+      if (usedBodies.has(draft.body)) {
+        index -= 1
+        continue
       }
 
       usedBodies.add(draft.body)
@@ -321,17 +334,10 @@ function fillerMessages() {
 async function seed() {
   ensureSchema()
 
-  const messages = [...curatedMessages(), ...fillerMessages()].sort((left, right) =>
+  const curated = curatedMessages()
+  const messages = [...curated, ...fillerMessages(curated)].sort((left, right) =>
     left.sentAt.localeCompare(right.sentAt),
   )
-
-  const embeddingInputs = messages.map((message) => {
-    const conversation = conversations.find(({ id }) => id === message.conversationId)
-    const sender = contacts.find(({ id }) => id === message.senderId)
-    return `${conversation?.title ?? ''} ${sender?.displayName ?? ''} ${message.body}`.trim()
-  })
-
-  const embeddings = await embedTexts(embeddingInputs)
 
   const conversationSummaries = conversations.map((conversation) => {
     const conversationMessages = messages
@@ -403,12 +409,12 @@ async function seed() {
       }
     }
 
-    messages.forEach((message, index) => {
+    messages.forEach((message) => {
       insertMessage.run({
         ...message,
         hasLink: message.hasLink ? 1 : 0,
         hasAttachment: message.hasAttachment ? 1 : 0,
-        embedding: embeddings?.[index] ? JSON.stringify(embeddings[index]) : null,
+        embedding: null,
       })
     })
   })
@@ -419,9 +425,7 @@ async function seed() {
     `Seeded ${contacts.length} contacts, ${conversations.length} conversations, and ${messages.length} messages.`,
   )
   console.log(
-    embeddings
-      ? 'Stored precomputed embeddings for semantic reranking.'
-      : 'Embeddings were unavailable, the app will fall back to lexical-only search.',
+    'Seeded SQLite corpus for lexical retrieval and Claude semantic reranking.',
   )
 }
 

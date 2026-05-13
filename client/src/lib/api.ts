@@ -1,4 +1,4 @@
-import type { OverviewResponse, SearchResponse } from '../types/search'
+import type { OverviewResponse, RerankStatusResponse, SearchResponse } from '../types/search'
 
 export async function fetchOverview() {
   const response = await fetch('/api/overview')
@@ -51,4 +51,14 @@ export async function fetchSearch(params: {
   }
 
   return (await response.json()) as SearchResponse
+}
+
+export async function fetchRerankStatus(rerankKey: string) {
+  const response = await fetch(`/api/search/rerank/${rerankKey}`)
+
+  if (!response.ok) {
+    throw new Error('Failed to load reranked results.')
+  }
+
+  return (await response.json()) as RerankStatusResponse
 }
