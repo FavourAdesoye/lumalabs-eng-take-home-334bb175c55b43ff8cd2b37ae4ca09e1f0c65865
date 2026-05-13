@@ -10,6 +10,21 @@ const repoDir = path.resolve(serverDir, '..')
 
 dotenv.config({ path: path.resolve(repoDir, '.env') })
 
+function resolveClientOrigin() {
+  const explicit = process.env.CLIENT_ORIGIN?.trim()
+  if (explicit) {
+    return explicit
+  }
+
+  const railwayDomain = process.env.RAILWAY_PUBLIC_DOMAIN?.trim()
+  if (railwayDomain) {
+    const host = railwayDomain.replace(/^https?:\/\//, '').split('/')[0]
+    return `https://${host}`
+  }
+
+  return 'http://localhost:5173'
+}
+
 export const config = {
   repoDir,
   serverDir,
@@ -17,7 +32,7 @@ export const config = {
   databasePath:
     process.env.DATABASE_PATH ?? path.resolve(serverDir, 'data', 'imessage-search.db'),
   port: Number(process.env.PORT ?? 3001),
-  clientOrigin: process.env.CLIENT_ORIGIN ?? 'http://localhost:5173',
+  clientOrigin: resolveClientOrigin(),
   anthropicApiKey: process.env.ANTHROPIC_API_KEY,
   semanticSearchEnabled:
     (process.env.SEMANTIC_SEARCH_ENABLED ?? 'true') !== 'false' &&

@@ -158,20 +158,7 @@ function App() {
           </p>
         </div>
 
-        <div className="hero-panel__metrics">
-          <div>
-            <strong>{overview.conversations.length}</strong>
-            <span>conversations</span>
-          </div>
-          <div>
-            <strong>{overview.contacts.length}</strong>
-            <span>contacts</span>
-          </div>
-          <div>
-            <strong>{results.length}</strong>
-            <span>visible hits</span>
-          </div>
-        </div>
+     
       </section>
 
       <section className="workspace">

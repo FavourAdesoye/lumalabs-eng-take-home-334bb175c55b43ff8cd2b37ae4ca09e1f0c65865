@@ -22,6 +22,30 @@ This starts:
 - the Vite client on `http://localhost:5173`
 - the Express API on `http://localhost:3001`
 
+### Docker
+
+```bash
+cp .env.example .env
+docker compose up --build
+```
+
+Open `http://localhost:3001` (Express serves the built client and API). If port `3001` is already in use, run `HOST_PORT=13001 docker compose up` and open `http://localhost:13001` instead.
+
+### Deploy to Railway
+
+This repo ships a root `Dockerfile` (builds the client, compiles the server, seeds SQLite) and `railway.toml` so Railway uses the Dockerfile builder and `/api/health` for health checks.
+
+1. In [Railway](https://railway.app), create a project and **New** → **GitHub Repo** (or **Empty Project** → connect the repo).
+2. Add a **single service** from this repository. Railway should pick up `railway.toml` and build with **Dockerfile**.
+3. Under the service **Variables**, set at least:
+   - `ANTHROPIC_API_KEY` — required for semantic reranking (leave unset to run lexical-only).
+   - `SEMANTIC_SEARCH_ENABLED` — optional; default `true` when a key is present (see `server/src/config.ts`).
+4. Open **Settings** → **Networking** → **Generate domain** (public HTTPS). No need to set `PORT`; Railway injects it.
+5. **CORS / public URL:** If you do not set `CLIENT_ORIGIN`, the server uses `https://<RAILWAY_PUBLIC_DOMAIN>` when that variable is present (Railway sets it automatically). For a **custom domain**, set `CLIENT_ORIGIN` to your public origin (for example `https://search.example.com`).
+6. Deploy. Open the generated URL; the SPA and `/api/*` are served from the same Express process.
+
+The SQLite file is baked into the image at build time. Runtime changes to the DB are not persisted across redeploys unless you attach a [volume](https://docs.railway.com/guides/volumes) and point `DATABASE_PATH` at the mounted path.
+
 Useful commands:
 
 ```bash

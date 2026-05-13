@@ -22,7 +22,6 @@ export function ConversationList({
     <aside className="conversation-list">
       <div className="conversation-list__header">
         <div>
-          <p className="eyebrow">Scope</p>
           <h2>Conversations</h2>
         </div>
         <button
