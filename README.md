@@ -31,20 +31,27 @@ docker compose up --build
 
 Open `http://localhost:3001` (Express serves the built client and API). If port `3001` is already in use, run `HOST_PORT=13001 docker compose up` and open `http://localhost:13001` instead.
 
-### Deploy to Railway
+### Deploy to Render
 
-This repo ships a root `Dockerfile` (builds the client, compiles the server, seeds SQLite) and `railway.toml` so Railway uses the Dockerfile builder and `/api/health` for health checks.
+This repo ships a root [`Dockerfile`](./Dockerfile) (builds the client, compiles the server, seeds SQLite) and a [`render.yaml`](./render.yaml) [Blueprint](https://render.com/docs/infrastructure-as-code) so you can provision a single **Docker** web service with a health check on `/api/health`.
 
-1. In [Railway](https://railway.app), create a project and **New** → **GitHub Repo** (or **Empty Project** → connect the repo).
-2. Add a **single service** from this repository. Railway should pick up `railway.toml` and build with **Dockerfile**.
-3. Under the service **Variables**, set at least:
-   - `ANTHROPIC_API_KEY` — required for semantic reranking (leave unset to run lexical-only).
-   - `SEMANTIC_SEARCH_ENABLED` — optional; default `true` when a key is present (see `server/src/config.ts`).
-4. Open **Settings** → **Networking** → **Generate domain** (public HTTPS). No need to set `PORT`; Railway injects it.
-5. **CORS / public URL:** If you do not set `CLIENT_ORIGIN`, the server uses `https://<RAILWAY_PUBLIC_DOMAIN>` when that variable is present (Railway sets it automatically). For a **custom domain**, set `CLIENT_ORIGIN` to your public origin (for example `https://search.example.com`).
-6. Deploy. Open the generated URL; the SPA and `/api/*` are served from the same Express process.
+**Option A — Blueprint (recommended)**
 
-The SQLite file is baked into the image at build time. Runtime changes to the DB are not persisted across redeploys unless you attach a [volume](https://docs.railway.com/guides/volumes) and point `DATABASE_PATH` at the mounted path.
+1. Push this repository to GitHub (or GitLab / Bitbucket supported by Render).
+2. In the [Render Dashboard](https://dashboard.render.com), choose **New** → **Blueprint**.
+3. Connect the repo and apply the blueprint. Render will create one web service from `render.yaml`.
+4. When prompted, set **`ANTHROPIC_API_KEY`** (marked `sync: false` in the blueprint). Semantic search stays off until a real key is set; you can leave it empty for lexical-only.
+5. After the first deploy, open the service URL (`*.onrender.com`). **`PORT`** and **`RENDER_EXTERNAL_URL`** are set automatically by Render.
+6. **CORS:** If you do not set **`CLIENT_ORIGIN`**, the server uses **`RENDER_EXTERNAL_URL`** (full `https://…` URL) for allowed browser origin. For a **custom domain**, set **`CLIENT_ORIGIN`** to that origin (for example `https://search.example.com`).
+
+**Option B — Manual web service**
+
+1. **New** → **Web Service**, connect the repo.
+2. Set **Runtime** to **Docker** (Render uses the root `Dockerfile` by default).
+3. Under **Environment**, add `ANTHROPIC_API_KEY` (and optionally `SEMANTIC_SEARCH_ENABLED`, `CLIENT_ORIGIN`).
+4. Set **Health Check Path** to `/api/health` in the service settings.
+
+The SQLite file is baked into the image at build time. To persist writes across deploys, attach a [Render disk](https://render.com/docs/disks) and set **`DATABASE_PATH`** to a file under the mount (for example `/data/imessage-search.db`).
 
 Useful commands:
 
@@ -117,7 +124,7 @@ We expect the result to be better than what an AI would produce on its own with 
 
 Build your solution directly in this repo. It should run. Include setup instructions that work in a fresh Linux container — we will run your code in one during review. If you use Docker, provide a `docker-compose.yml` for one-command setup.
 
-**If your project is deployable, deploy it.** We want to experience what you built, not just read about it. A live URL — whether it's a web app, an API endpoint, a browser extension, or a hosted service — goes a long way. Vercel, Railway, Fly, a VPS, whatever works. Include the URL in your APPROACH.md.
+**If your project is deployable, deploy it.** We want to experience what you built, not just read about it. A live URL — whether it's a web app, an API endpoint, a browser extension, or a hosted service — goes a long way. Vercel, Render, Fly, a VPS, whatever works. Include the URL in your APPROACH.md.
 
 A `.env.example` is included with stub keys for providers we have accounts with (Anthropic, OpenAI, ElevenLabs, Google Cloud, AWS). Copy it to `.env`, use whichever keys your solution needs, and document any others.
 

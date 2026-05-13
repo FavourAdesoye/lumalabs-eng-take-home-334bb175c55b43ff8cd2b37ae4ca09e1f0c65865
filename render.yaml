@@ -1,0 +1,13 @@
+# https://render.com/docs/infrastructure-as-code
+services:
+  - type: web
+    name: imessage-search
+    runtime: docker
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SEMANTIC_SEARCH_ENABLED
+        value: "true"
+      - key: ANTHROPIC_API_KEY
+        sync: false

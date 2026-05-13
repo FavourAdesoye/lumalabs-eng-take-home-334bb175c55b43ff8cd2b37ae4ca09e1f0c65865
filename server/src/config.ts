@@ -16,10 +16,9 @@ function resolveClientOrigin() {
     return explicit
   }
 
-  const railwayDomain = process.env.RAILWAY_PUBLIC_DOMAIN?.trim()
-  if (railwayDomain) {
-    const host = railwayDomain.replace(/^https?:\/\//, '').split('/')[0]
-    return `https://${host}`
+  const renderUrl = process.env.RENDER_EXTERNAL_URL?.trim()
+  if (renderUrl) {
+    return renderUrl.replace(/\/$/, '')
   }
 
   return 'http://localhost:5173'

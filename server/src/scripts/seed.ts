@@ -99,7 +99,7 @@ function curatedMessages() {
     makeMessage('conv-luma', 'theo', 'I like the thread-level search idea too. iMessage still makes me search globally for everything.', 68),
     makeMessage('conv-luma', 'maya', 'I added notes about highlighting the matched text and showing conversation context in the result card.', 52),
     makeMessage('conv-luma', 'you', 'Let us keep the semantic rerank small. Top 40 lexical candidates should be enough.', 49),
-    makeMessage('conv-luma', 'theo', 'Railway should be easier than forcing this through serverless + sqlite workarounds.', 42),
+    makeMessage('conv-luma', 'theo', 'Render should be easier than forcing this through serverless + sqlite workarounds.', 42),
     makeMessage('conv-nora', 'nora', 'wifi password is still aurora-house-24 if you are coming by tonight', 130),
     makeMessage('conv-nora', 'you', 'Perfect, I forgot whether it was the old router or the new one.', 128),
     makeMessage('conv-nora', 'nora', 'I left the parking note under the plant by the front door.', 120),
@@ -147,7 +147,7 @@ function buildLumaDraft(): FillerDraft {
       }
     case 'infra':
       return {
-        body: `I dropped the deployment notes here: https://example.com/${pick(['railway-checklist', 'sqlite-notes', 'review-setup'])}`,
+        body: `I dropped the deployment notes here: https://example.com/${pick(['render-checklist', 'sqlite-notes', 'review-setup'])}`,
         hasLink: true,
       }
     default:

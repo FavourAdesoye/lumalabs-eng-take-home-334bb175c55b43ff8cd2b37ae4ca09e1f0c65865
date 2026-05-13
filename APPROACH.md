@@ -68,9 +68,9 @@ That tradeoff favors semantic quality and product feel over fully local inferenc
 
 I am using `Faker.js` to generate realistic message threads with recurring people, plans, links, addresses, rescheduled events, half-remembered wording, and other message patterns that make search interesting. Good seeded data is important here because hybrid search only looks compelling if the corpus feels like a believable personal history rather than toy placeholder text.
 
-### Hosting: `Railway`
+### Hosting: `Render`
 
-I chose `Railway` over `Vercel` because this project benefits from a Node server and a local SQLite-backed setup. Railway is a better fit for hosting the Express app and SQLite corpus together without having to work around serverless constraints.
+I chose `Render` with a **Docker** web service because this project needs a long-running Node process, a predictable filesystem for SQLite, and environment variables that match production without platform-specific quirks. Render’s Dockerfile flow and **`RENDER_EXTERNAL_URL`** (used automatically for CORS when **`CLIENT_ORIGIN`** is unset) keep deployment simple compared to splitting static hosting and serverless API workarounds.
 
 ## Software Architecture
 
